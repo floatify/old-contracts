@@ -1,0 +1,29 @@
+{
+  "name": "floatify-contracts",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "truffle test",
+    "coverage": "npx solidity-coverage",
+    "update-contract": "rm -rf build && rm ../floatify/functions/contracts/FloatifyAccount.json && truffle compile && cp build/contracts/FloatifyAccount.json ../floatify/functions/contracts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^2.3.0",
+    "bignumber.js": "^9.0.0",
+    "ethlint": "^1.2.4",
+    "truffle": "^5.0.33",
+    "truffle-security": "^1.5.5"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-chai-friendly": "^0.4.1",
+    "eslint-plugin-import": "^2.18.2",
+    "openzeppelin-test-helpers": "^0.4.2",
+    "solidity-coverage": "^0.6.4"
+  }
+}
