@@ -1,5 +1,5 @@
 // =================================================================================================
-//                                    OPEN ZEPPELIN CONTRACTS
+//                                    CTOKEN INTERFACE
 // =================================================================================================
 
 pragma solidity 0.5.8; // use same version as Compound's contract
@@ -104,6 +104,9 @@ interface ICERC20 {
     function redeemUnderlying(uint redeemAmount) external returns (uint);
 }
 
+// =================================================================================================
+//                                    OPEN ZEPPELIN CONTRACTS
+// =================================================================================================
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -326,12 +329,12 @@ contract FloatifyAccount is Ownable {
      /**
       * @dev Emitted on redemption of cDAI for DAI by specifying cDAI amount
       */
-    event RedeemMax(uint256 indexed daiAmount, uint256 indexed cdaiAmount);
+    event RedeemMax(uint256 indexed daiAmount, uint256 indexed cdaiAmount, address indexed withdrawalAddress);
 
     /**
      * @dev Emitted on redemption of cDAI for DAI by specifying DAI amount
      */
-    event RedeemPartial(uint256 indexed daiAmount, uint256 indexed cdaiAmount);
+    event RedeemPartial(uint256 indexed daiAmount, uint256 indexed cdaiAmount, address indexed withdrawalAddress);
 
     // =============================================================================================
     //                                   MAIN OPERATION FUNCTIONS
@@ -385,6 +388,7 @@ contract FloatifyAccount is Ownable {
      * @param _withdrawalAddress Address to send DAI to
      */
     function withdraw(address _withdrawalAddress) public onlyOwner {
+        require(_withdrawalAddress != address(0), "Cannot withdraw to the zero address");
         uint256 _daiBalance = daiContract.balanceOf(address(this));
         emit Withdraw(_withdrawalAddress, _daiBalance);
         require(daiContract.transfer(_withdrawalAddress, _daiBalance), "Withrawal of DAI failed");
@@ -397,6 +401,7 @@ contract FloatifyAccount is Ownable {
      */
     function redeemAndWithdrawMax(address _withdrawalAddress) external onlyOwner {
         // 1a. Destination address specified as an input
+        require(_withdrawalAddress != address(0), "Cannot withdraw to the zero address");
         // 1b. Get the cDAI balance of this contract
         uint256 _cdaiBalance = cdaiContract.balanceOf(address(this));
         // 1c. Call redeem() with the balance from step 1b
@@ -405,20 +410,21 @@ contract FloatifyAccount is Ownable {
         //   trust the DAI and cDAI contracts to be secure, the risk is mitigated
         require(cdaiContract.redeem(_cdaiBalance) == 0, "Redemption of all cDAI for DAI failed");
         uint256 _daiBalance = daiContract.balanceOf(address(this));
-        emit RedeemMax(_daiBalance, _cdaiBalance);
+        emit RedeemMax(_daiBalance, _cdaiBalance, _withdrawalAddress);
         totalWithdrawn = _daiBalance.add(totalWithdrawn); // right after this line we withdraw the full DAI balance
         // 1d. Withdraw all DAI to the address specified in step 1a
         withdraw(_withdrawalAddress);
     }
 
     /**
-     * @notice Redeems the specified amount of cDAI for DAI and sends it to a specified address
+     * @notice Takes an amount of DAI and redeems the equivalent amount of cDAI
      * @dev This corresponds to flow 2 above
      * @param _withdrawalAddress Address to send DAI to
      * @param _daiAmount Amount of DAI to redeem
      */
     function redeemAndWithdrawPartial(address _withdrawalAddress, uint256 _daiAmount) external onlyOwner {
         // 2a. Address to withdraw to and amount of DAI to withdraw specified as inputs
+        require(_withdrawalAddress != address(0), "Cannot withdraw to the zero address");
         // 2b. Call redeemUnderlying() with the amount of DAI specified in step 2a
         uint256 _initialCdaiBalance = cdaiContract.balanceOf(address(this));
         require(cdaiContract.redeemUnderlying(_daiAmount) == 0, "Redemption of some cDAI for DAI failed");
@@ -428,7 +434,7 @@ contract FloatifyAccount is Ownable {
         //   trust the DAI and cDAI contracts to be secure, the risk is mitigated
         uint256 _daiBalance = daiContract.balanceOf(address(this));
         uint256 _cdaiBalance = _initialCdaiBalance.sub(_finalCdaiBalance);
-        emit RedeemPartial(_daiAmount, _cdaiBalance);
+        emit RedeemPartial(_daiAmount, _cdaiBalance, _withdrawalAddress);
         totalWithdrawn = _daiBalance.add(totalWithdrawn); // right after this line we withdraw the full DAI balance
         // 2c. Withdraw all DAI to the address specified in step 2a
         withdraw(_withdrawalAddress);

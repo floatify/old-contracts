@@ -180,6 +180,21 @@ contract('FloatifyAccount', (accounts) => {
         'Ownable: caller is not the owner',
       );
     });
+
+    it('prevents functions from being called if zero address is the input', async () => {
+      await expectRevert(
+        FloatifyInstance.withdraw(constants.ZERO_ADDRESS, { from: ownerDeployAddress }),
+        'Cannot withdraw to the zero address',
+      );
+      await expectRevert(
+        FloatifyInstance.redeemAndWithdrawMax(constants.ZERO_ADDRESS, { from: ownerDeployAddress }),
+        'Cannot withdraw to the zero address',
+      );
+      await expectRevert(
+        FloatifyInstance.redeemAndWithdrawPartial(constants.ZERO_ADDRESS, '1', { from: ownerDeployAddress }),
+        'Cannot withdraw to the zero address',
+      );
+    });
   }); // end access control tests
 
 
@@ -367,7 +382,10 @@ contract('FloatifyAccount', (accounts) => {
       const userDaiBalance = await DaiContract.methods.balanceOf(userWyreAddress).call();
 
       // TODO add check of emitted cDAI balance
-      await expectEvent.inLogs(logs, 'RedeemMax', { daiAmount: userDaiBalance });
+      await expectEvent.inLogs(logs, 'RedeemMax', {
+        daiAmount: userDaiBalance,
+        withdrawalAddress: userWyreAddress
+      });
       await expectEvent.inLogs(logs, 'Withdraw', { destinationAddress: userWyreAddress, daiAmount: userDaiBalance });
     });
 
@@ -384,7 +402,10 @@ contract('FloatifyAccount', (accounts) => {
       );
 
       // TODO add check of emitted cDAI balance
-      await expectEvent.inLogs(logs, 'RedeemPartial', { daiAmount: daiToWithdrawMachine });
+      await expectEvent.inLogs(logs, 'RedeemPartial', {
+        daiAmount: daiToWithdrawMachine,
+        withdrawalAddress: userWyreAddress
+      });
       await expectEvent.inLogs(logs, 'Withdraw', {
         destinationAddress: userWyreAddress, daiAmount: daiToWithdrawMachine,
       });
@@ -402,7 +423,8 @@ contract('FloatifyAccount', (accounts) => {
       expect(await FloatifyInstance.totalDeposited()).to.be.bignumber.equal('0');
       expect(await FloatifyInstance.totalWithdrawn()).to.be.bignumber.equal('0');
       // Withdraw the DAI and ensure they're still 0
-      await FloatifyInstance.withdraw(constants.ZERO_ADDRESS, { from: ownerDeployAddress });
+      // arbitrarily send to the wyreAddress
+      await FloatifyInstance.withdraw(wyreAddress, { from: ownerDeployAddress });
       expect(await FloatifyInstance.totalDeposited()).to.be.bignumber.equal('0');
       expect(await FloatifyInstance.totalWithdrawn()).to.be.bignumber.equal('0');
     });
